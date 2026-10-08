@@ -107,7 +107,7 @@ def build_html(b: BuildInput) -> str:
     t, m = b.theme, b.meta
     nonce = secrets.token_urlsafe(16)
     csp = (
-        f"default-src 'none'; script-src 'nonce-{nonce}' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'unsafe-inline' file:; "
+        f"default-src 'none'; script-src 'nonce-{nonce}' 'wasm-unsafe-eval'; style-src 'unsafe-inline' file:; "
         "font-src file: data:; img-src file: data:; connect-src 'none'; frame-src 'none'; object-src 'none'; "
         "base-uri 'none'; form-action 'none'; worker-src blob:"
     )
@@ -157,9 +157,8 @@ def build_html(b: BuildInput) -> str:
         from . import puml_js
 
         scripts += [_script(p, nonce) for p in puml_js.script_files(b.plantuml_source_text)]
-    scripts.append(
-        f'<script nonce="{nonce}" id="md2doc-config" type="application/json">'
-        + json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/") + "</script>\n"
-    )
+    # a JS global (not a DOM element looked up by id, which a document could shadow); ASCII-only, no < > &
+    payload = (json.dumps(cfg, ensure_ascii=True).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026"))
+    scripts.append(f'<script nonce="{nonce}">window.__md2docConfig={payload};</script>\n')
     scripts.append(_script(paths.WEB_DIR / "render.js", nonce))
     return "\n".join(head) + "\n" + body[0] + "\n" + "".join(scripts) + "</body></html>\n"

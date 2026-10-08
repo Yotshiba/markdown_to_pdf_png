@@ -12,6 +12,8 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+
+from .safepath import is_unc
 from urllib.request import url2pathname
 
 MAX_LOCAL_BYTES = 60 * 1024 * 1024
@@ -54,6 +56,7 @@ def _shrink(data: bytes, mime: str, max_px: int) -> tuple[bytes, str]:
     """Downscale oversized rasters. Small PNG/JPEG/WebP pass through unchanged."""
     from PIL import Image, ImageOps
 
+    Image.MAX_IMAGE_PIXELS = 100_000_000  # bigger than this is treated as a decompression bomb
     try:
         im = Image.open(io.BytesIO(data))
         if max(im.size) <= max_px and mime in ("image/png", "image/jpeg", "image/webp"):
@@ -66,6 +69,8 @@ def _shrink(data: bytes, mime: str, max_px: int) -> tuple[bytes, str]:
             return out.getvalue(), "image/png"
         im.convert("RGB").save(out, "JPEG", quality=90, optimize=True)
         return out.getvalue(), "image/jpeg"
+    except Image.DecompressionBombError:
+        raise
     except Exception:
         return data, mime
 
@@ -120,11 +125,14 @@ class ImageStager:
         if mime is None:
             return self._fail(src, "not a supported image format")
         if mime not in ("image/svg+xml", "image/gif"):
-            data, mime = _shrink(data, mime, self.max_px)
+            try:
+                data, mime = _shrink(data, mime, self.max_px)
+            except Exception:  # decompression bomb, corrupt file
+                return self._fail(src, "image is corrupt or too large to decode")
         return self._stage(data, mime)
 
     def _fail(self, src: str, why: str) -> str:
-        self.warn(f"image unavailable ({why}): {src[:120]}")
+        self.warn(f"image unavailable ({why}): {unquote(src)[:120]}")
         return PLACEHOLDER_URI
 
     def _is_staged(self, src: str) -> bool:
@@ -148,8 +156,8 @@ class ImageStager:
             return None
         else:
             s = unquote(src.split("#")[0].split("?")[0])
-        if s.startswith("\\\\") or s.startswith("//"):
-            return None  # UNC paths are never read
+        if is_unc(s):
+            return None  # UNC paths are never read (checked before any resolve(): resolving would touch the network)
         q = Path(s)
         return (q if q.is_absolute() else self.base / q).resolve()
 
@@ -171,21 +179,9 @@ class ImageStager:
         cached = self._cache_path(url)
         if cached and cached.is_file() and time.time() - cached.stat().st_mtime < CACHE_TTL_S:
             return cached.read_bytes()
-        try:
-            import httpx
-
-            with httpx.Client(timeout=httpx.Timeout(15.0, connect=5.0), follow_redirects=True,
-                              headers={"User-Agent": "md2doc/0.1"}) as c, c.stream("GET", url) as r:
-                if r.status_code != 200:
-                    return None
-                buf = bytearray()
-                for chunk in r.iter_bytes():
-                    buf += chunk
-                    if len(buf) > MAX_REMOTE_BYTES:
-                        return None
-        except Exception:
+        data = _download_public(url)
+        if data is None:
             return None
-        data = bytes(buf)
         if cached and sniff(data):
             try:
                 cached.parent.mkdir(parents=True, exist_ok=True)
@@ -206,3 +202,50 @@ class ImageStager:
             self.assets.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(data)
         return dest.resolve().as_uri()
+
+
+def _public_host(host: str) -> bool:
+    """Only public internet hosts: no loopback, private, link-local or reserved addresses (SSRF guard)."""
+    import ipaddress
+    import socket
+
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except OSError:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0].split("%")[0])
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified:
+            return False
+    return bool(infos)
+
+
+def _download_public(url: str, total_s: float = 25.0, max_redirects: int = 4) -> bytes | None:
+    """GET with manual redirect handling: every hop must be http(s) to a public host; hard overall time cap."""
+    import httpx
+
+    deadline = time.monotonic() + total_s
+    try:
+        with httpx.Client(timeout=httpx.Timeout(10.0, connect=5.0), follow_redirects=False,
+                          headers={"User-Agent": "md2doc/0.1"}) as c:
+            for _ in range(max_redirects + 1):
+                p = urlparse(url)
+                if p.scheme not in ("http", "https") or not p.hostname or not _public_host(p.hostname):
+                    return None
+                with c.stream("GET", url) as r:
+                    if r.is_redirect:
+                        url = str(r.next_request.url) if r.next_request else ""
+                        if not url:
+                            return None
+                        continue
+                    if r.status_code != 200:
+                        return None
+                    buf = bytearray()
+                    for chunk in r.iter_bytes():
+                        buf += chunk
+                        if len(buf) > MAX_REMOTE_BYTES or time.monotonic() > deadline:
+                            return None
+                    return bytes(buf)
+    except Exception:
+        return None
+    return None

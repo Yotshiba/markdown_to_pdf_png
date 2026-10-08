@@ -71,6 +71,11 @@ class Job(BaseModel):
         """Flatten the simple fields into a Theme-shaped override dict (merged over front matter)."""
         from .frontmatter import margins
 
+        import re
+
+        for label, val in (("--accent", self.accent), ("--tone-seed", self.tone_seed)):
+            if val and not re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", val.strip()):
+                raise ValueError(f"{label} needs a colour like #e91e63, got {val!r}")
         ov: dict = {}
 
         def put(path: list[str], value) -> None:

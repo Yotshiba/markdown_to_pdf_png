@@ -45,7 +45,8 @@ class ExportRunner(QObject):
         p.readyReadStandardError.connect(self._on_stderr)
         p.finished.connect(self._on_finished)
         p.errorOccurred.connect(self._on_error)
-        args = ["-m", "md2doc", "export", "--job", name, "--jsonl"] + (["--both"] if both else [])
+        args = ["-I", "-m", "md2doc", "export", "--job", name, "--jsonl"] + (["--both"] if both else [])  # -I: ignore cwd/env imports
+        p.setWorkingDirectory(tempfile.gettempdir())
         env = p.processEnvironment()
         from PySide6.QtCore import QProcessEnvironment
 
@@ -61,7 +62,10 @@ class ExportRunner(QObject):
         self._cancelled = True
         pid = self._proc.processId()
         # QProcess.kill() would only terminate this one process and orphan node + msedge
-        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True, creationflags=0x08000000)
+        import os
+
+        tk = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")  # absolute: never the cwd
+        subprocess.run([tk, "/PID", str(pid), "/T", "/F"], capture_output=True, creationflags=0x08000000)
 
     # ------------------------------------------------------------------------------------------
     def _on_stdout(self) -> None:

@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-EXIT_OK, EXIT_FATAL, EXIT_STRICT, EXIT_NO_BROWSER, EXIT_TIMEOUT, EXIT_CANCELLED = 0, 1, 2, 3, 4, 5
+EXIT_OK, EXIT_FATAL, EXIT_STRICT, EXIT_NO_BROWSER, EXIT_TIMEOUT, EXIT_CANCELLED, EXIT_USAGE = 0, 1, 2, 3, 4, 5, 64
 SUBCOMMANDS = {"setup", "doctor", "themes", "fonts", "export"}
 
 
@@ -24,12 +24,19 @@ def _utf8() -> None:
             pass
 
 
+class _Parser(argparse.ArgumentParser):
+    def error(self, message):  # exit code 2 means "warnings under --strict"; usage errors use 64
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {message}", file=sys.stderr)
+        raise SystemExit(EXIT_USAGE)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
+    p = _Parser(
         prog="md2doc", description="Convert Markdown to PDF or PNG (images, LaTeX, Mermaid, PlantUML, themes, fonts).",
         epilog="Other commands: md2doc setup | doctor | themes | fonts   (md2doc <command> -h)")
     p.add_argument("input", type=Path, help="Markdown file")
-    p.add_argument("-o", "--output", type=Path, help="output file or folder (default: next to the input)")
+    p.add_argument("-o", "--output", help="output file, or a folder when it ends with a slash (default: next to the input)")
     p.add_argument("-f", "--format", choices=["pdf", "png", "both"], default="pdf")
     g = p.add_argument_group("look")
     g.add_argument("--theme", help="preset id or path to a theme .json (see: md2doc themes)")
@@ -57,7 +64,8 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--scale", type=float, help="device scale factor 1-4 (default 2)")
     g.add_argument("--transparent", action="store_true", help="transparent background")
     g = p.add_argument_group("document")
-    g.add_argument("--toc", nargs="?", const=3, type=int, help="table of contents up to heading depth (default 3)")
+    g.add_argument("--toc", action="store_true", help="add a table of contents")
+    g.add_argument("--toc-depth", type=int, default=3, metavar="N", help="heading depth for --toc (default 3)")
     g.add_argument("--cover", action="store_true", help="title page from front matter (title, subtitle, author, date)")
     g.add_argument("--numbered", action="store_true", help="number the headings")
     g.add_argument("--captions", choices=["alt", "title", "none"], default="alt", help="figure captions from image alt/title text")
@@ -84,14 +92,17 @@ def build_parser() -> argparse.ArgumentParser:
 def job_from_args(a: argparse.Namespace):
     from .job import Job
 
+    out = a.output
+    if out and out.endswith(("/", chr(92))):  # "-o folder/" means a folder: create it
+        Path(out).mkdir(parents=True, exist_ok=True)
     return Job(
-        input=a.input, output=a.output, format="pdf" if a.format == "both" else a.format,
+        input=a.input, output=Path(out) if out else None, format="pdf" if a.format == "both" else a.format,
         theme=a.theme, mode=a.mode, accent=a.accent, tone_seed=a.tone_seed, temperature=a.temperature,
         saturation=a.saturation, lightness=a.lightness, font=a.font, heading_font=a.heading_font,
         mono_font=a.mono_font, font_size=a.font_size, line_height=a.line_height, font_files=a.font_file, css_files=a.css,
         page_size=a.page_size, orientation="landscape" if a.landscape else None, margin=a.margin, columns=a.columns,
         page_numbers=False if a.no_page_numbers else None, png_width=a.png_width, scale=a.scale,
-        transparent=True if a.transparent else None, toc=a.toc, cover=True if a.cover else None,
+        transparent=True if a.transparent else None, toc=a.toc_depth if a.toc else None, cover=True if a.cover else None,
         numbered_headings=True if a.numbered else None, captions=a.captions, typographer=a.typographer,
         html=a.html, trusted=not a.untrusted, remote_images=not a.no_remote_images, plantuml=a.plantuml,
         allow_remote_plantuml=a.allow_remote_plantuml, java_path=a.java_path, dot_path=a.dot_path,
@@ -130,6 +141,8 @@ def run_job(job, jsonl: bool = False, quiet: bool = False, both: bool = False) -
         for fmt in (["pdf", "png"] if both else [job.format]):
             j = job.model_copy(update={"format": fmt, "output": job.output if not both else _both_out(job, fmt)})
             results.append(convert(j, rep))
+    except KeyboardInterrupt:
+        return _fail(RuntimeError("cancelled"), jsonl, EXIT_CANCELLED, "cancelled")
     except NoBrowserError as e:
         return _fail(e, jsonl, EXIT_NO_BROWSER, "no_browser")
     except (ExportError, ValueError, KeyError, OSError) as e:

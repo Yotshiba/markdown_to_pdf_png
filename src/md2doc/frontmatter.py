@@ -2,6 +2,9 @@
 import re, datetime as dt
 import yaml
 
+_HEX = re.compile(r'#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})')
+MAX_FRONT_MATTER = 65536
+
 _FM = re.compile('\\A\\ufeff?---[ \\t]*\\r?\\n(.*?)\\r?\\n(?:---|\\.\\.\\.)[ \\t]*(?:\\r?\\n|\\Z)', re.S)
 _UNITS = {'mm': 1.0, 'cm': 10.0, 'in': 25.4, 'pt': 25.4 / 72, 'px': 25.4 / 96}
 
@@ -13,6 +16,10 @@ def split_front_matter(text):  # -> (dict, body, warnings)
     m = _FM.match(text)
     if not m: return {}, text, []
     try:
+        if len(m.group(1)) > MAX_FRONT_MATTER:
+            raise ValueError('front matter is larger than 64 KB')
+        if any(isinstance(e, yaml.AliasEvent) for e in yaml.parse(m.group(1), Loader=yaml.SafeLoader)):
+            raise ValueError('YAML aliases (*name) are not supported')  # alias bombs expand exponentially
         data = yaml.safe_load(m.group(1)) or {}
         if not isinstance(data, dict): raise ValueError('front matter must be a mapping')
     except Exception as e:  # bad YAML must not abort the render
@@ -40,12 +47,17 @@ def front_to_overrides(fm):  # -> (theme_overrides, doc_meta, warnings)
     for k, v in fm.items():
         try:
             if k == 'theme': ov['__theme__'] = str(v)                      # preset id or path; caller loads the base preset
-            elif k == 'accent': ov['accent'] = str(v)                       # recolour accent-linked tokens only
-            elif k == 'tone': ov['tone'] = dict(v) if isinstance(v, dict) else {'seed': str(v)}   # full palette regeneration
+            elif k == 'accent':                                              # recolour accent-linked tokens only
+                if not _HEX.fullmatch(str(v).strip()): raise ValueError('needs a colour like #e91e63')
+                ov['accent'] = str(v).strip()
+            elif k == 'tone':                                                # full palette regeneration
+                t = dict(v) if isinstance(v, dict) else {'seed': str(v)}
+                if not _HEX.fullmatch(str(t.get('seed', '')).strip()): raise ValueError('tone needs a seed colour like #2e7d32')
+                ov['tone'] = {a: b for a, b in t.items() if a in ('seed', 'temperature', 'saturation', 'lightness', 'min_contrast')}
             elif k == 'font':
                 if isinstance(v, dict): ov.setdefault('fonts', {}).update({a: b for a, b in v.items() if a in ('body', 'heading', 'mono', 'size_pt', 'line_height')})
-                else: ov.setdefault('fonts', {})['body'] = f"'{v}', sans-serif"
-            elif k == 'mono_font': ov.setdefault('fonts', {})['mono'] = f"'{v}', monospace"
+                else: ov.setdefault('fonts', {})['body'] = f"'{str(v).replace(chr(39), '')}', sans-serif"
+            elif k == 'mono_font': ov.setdefault('fonts', {})['mono'] = f"'{str(v).replace(chr(39), '')}', monospace"
             elif k == 'font_size': ov.setdefault('fonts', {})['size_pt'] = float(v)
             elif k == 'page':
                 p = {}

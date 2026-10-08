@@ -19,6 +19,7 @@ import zlib
 from pathlib import Path
 
 from . import paths
+from .safepath import is_unc
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 MIN_JAVA = 11
@@ -53,24 +54,49 @@ _LOCAL_INC = re.compile(r"^[ \t]*!include(?:_once)?[ \t]+(?!<|https?:)([^\r\n]+?
 _REMOTE = re.compile(r"^\s*!(?:includeurl|include_many|theme\s+\S+\s+from\s+\S+|include(?:_once)?\s+https?:)", re.I | re.M)
 
 
-def inline_local_includes(src: str, base: Path, depth: int = 0, cap: int = 200_000) -> str:
-    """Replace `!include foo.puml` by the file text when it lives inside `base`. Raises ValueError otherwise."""
+def inline_local_includes(src: str, base: Path, depth: int = 0, cap: int = 200_000, budget: list[int] | None = None,
+                          root: Path | None = None) -> str:
+    """Replace `!include foo.puml` by the file text when it lives inside the document folder.
+
+    Raises ValueError otherwise. `budget` = [files read, bytes read] is shared across the whole expansion.
+    """
     if depth > 5:
         raise ValueError("include depth > 5")
+    budget = budget if budget is not None else [0, 0]
+    root = (root or base).resolve()
 
     def repl(m: re.Match) -> str:
-        p = (base / m.group(1).strip().strip('"')).resolve()
-        if not p.is_relative_to(base.resolve()) or not p.is_file() or p.stat().st_size > cap:
-            raise ValueError(f'include not allowed or missing: {m.group(1)}')
+        name = m.group(1).strip().strip('"')
+        if is_unc(name):  # check BEFORE touching the path: resolving a UNC path opens a network connection
+            raise ValueError(f"include not allowed or missing: {name}")
+        p = (base / name).resolve()
+        if not p.is_relative_to(root) or not p.is_file() or p.stat().st_size > cap:
+            raise ValueError(f"include not allowed or missing: {name}")
+        budget[0] += 1
+        budget[1] += p.stat().st_size
+        if budget[0] > 40 or budget[1] > 1_000_000:
+            raise ValueError("too many or too large includes")
         txt = p.read_text(encoding="utf-8")
         txt = re.sub(r"^\s*@(?:start|end)\w*.*$", "", txt, flags=re.M)
-        return inline_local_includes(txt, p.parent, depth + 1, cap)
+        return inline_local_includes(txt, p.parent, depth + 1, cap, budget, root)
 
     return _LOCAL_INC.sub(repl, src)
 
 
-def prepare(src: str, preamble: str, base_dir: Path) -> tuple[str, str | None]:
-    """-> (final source, error message or None). Includes are resolved here; remote ones are refused."""
+# diagram kinds the built-in JS engine (release 1.2026.8) does not recognise; the Java jar renders them
+JS_UNSUPPORTED = {"salt", "ditaa"}
+
+
+def diagram_kind(src: str) -> str:
+    m = re.search(r"^@start(\w+)", src, re.M)
+    return m.group(1).lower() if m else "uml"
+
+
+def prepare(src: str, preamble, base_dir: Path) -> tuple[str, str | None]:
+    """-> (final source, error message or None). Includes are resolved here; remote ones are refused.
+
+    `preamble` is a string, or a callable taking the diagram kind ('uml', 'mindmap', ...) and returning one.
+    """
     s = normalize_puml(src)
     if _REMOTE.search(s):
         return s, "Remote includes/themes (!includeurl, http includes, '!theme x from url') are disabled for safety."
@@ -80,7 +106,8 @@ def prepare(src: str, preamble: str, base_dir: Path) -> tuple[str, str | None]:
         return s, f"PlantUML include blocked: {e}"
     if _RISKY.search(s):  # anything left after inlining that is not a stdlib <...> include
         return s, "Only '!include <stdlib/...>' and '!include file' inside the document folder are allowed."
-    return inject_preamble(s, preamble), None
+    pre = preamble(diagram_kind(s)) if callable(preamble) else preamble
+    return inject_preamble(s, pre), None
 
 
 def cache_key(engine: str, version: str, preamble: str, src: str) -> str:
@@ -154,7 +181,7 @@ def find_java(user_path: str | None = None) -> tuple[Path, int] | None:
 
 
 def find_dot(user_path: str | None = None) -> Path | None:
-    c = [user_path, os.environ.get("GRAPHVIZ_DOT"), shutil.which("dot")]
+    c = [user_path, os.environ.get("GRAPHVIZ_DOT"), shutil.which("dot", path=os.environ.get("PATH", ""))]  # explicit path: never the cwd
     for base in (os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")):
         c += [str(p / "bin" / "dot.exe") for p in Path(base).glob("Graphviz*")]
     return next((Path(x) for x in c if x and Path(x).is_file()), None)
@@ -167,13 +194,18 @@ def find_jar() -> Path | None:
     return None
 
 
+def _taskkill() -> str:
+    """Absolute path: a bare name would be searched in the current directory first on Windows."""
+    return os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32", "taskkill.exe")
+
+
 def _run(cmd: list[str], stdin: bytes, timeout: int) -> tuple[int, str, str]:
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                          creationflags=CREATE_NO_WINDOW)
     try:
         out, err = p.communicate(stdin, timeout=timeout)
     except subprocess.TimeoutExpired:
-        subprocess.run(["taskkill", "/F", "/T", "/PID", str(p.pid)], capture_output=True, creationflags=CREATE_NO_WINDOW)
+        subprocess.run([_taskkill(), "/F", "/T", "/PID", str(p.pid)], capture_output=True, creationflags=CREATE_NO_WINDOW)
         p.communicate()
         raise PumlError(f"PlantUML took longer than {timeout} s and was stopped.", "timeout") from None
     return p.returncode, out.decode("utf-8", "replace"), err.decode("utf-8", "replace")

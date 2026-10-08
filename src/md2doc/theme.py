@@ -1,11 +1,46 @@
 """Theme data model, layered resolution (CLI > front matter > saved > preset) and contrast audit."""
 import copy
+import re
 from typing import Annotated, Literal
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 from . import tone
 
 Hex = Annotated[str, StringConstraints(pattern=r'^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')]
 Slug = Annotated[str, StringConstraints(pattern=r'^[a-z0-9][a-z0-9-]{0,47}$')]
+
+PAPER_MM = {'A3': (297, 420), 'A4': (210, 297), 'A5': (148, 210), 'B5': (176, 250), 'LETTER': (215.9, 279.4),
+            'LEGAL': (215.9, 355.6), 'TABLOID': (279.4, 431.8)}
+_TO_MM = {'mm': 1.0, 'cm': 10.0, 'in': 25.4, 'pt': 25.4 / 72, 'px': 25.4 / 96}
+_DIMS = re.compile(r'^\s*(\d+(?:\.\d+)?)\s*(mm|cm|in|pt|px)?\s*(?:x|X|\s)\s*(\d+(?:\.\d+)?)\s*(mm|cm|in|pt|px)?\s*$')
+
+
+def page_dims_mm(size: str) -> tuple[float, float]:
+    """(width, height) in mm, portrait. Accepts a paper name or two lengths like '210mm 297mm' / '8.5inx11in'."""
+    s = str(size).strip()
+    if s.upper() in PAPER_MM:
+        return PAPER_MM[s.upper()]
+    m = _DIMS.match(s)
+    if m:
+        w = float(m.group(1)) * _TO_MM[m.group(2) or 'mm']
+        h = float(m.group(3)) * _TO_MM[m.group(4) or m.group(2) or 'mm']
+        if 50 <= w <= 2000 and 50 <= h <= 2000:
+            return w, h
+    raise ValueError(f"unknown page size {size!r}: use {', '.join(n.title() for n in PAPER_MM)} or e.g. '210mm 297mm'")
+
+
+# anything that could end a CSS declaration or string is dropped from user-supplied font stacks
+_FONT_BAD = re.compile(r"[^A-Za-z0-9 ,'\".\u00A0-\u2027\u202A-\uFFFF_-]")
+
+
+def clean_font_stack(v):
+    if v is None:
+        return None
+    s = _FONT_BAD.sub('', str(v))
+    for q in ('"', "'"):
+        if s.count(q) % 2:
+            s = s.replace(q, '')
+    return s.strip()[:200] or 'sans-serif'
+
 
 class _M(BaseModel):
     model_config = ConfigDict(extra='forbid', validate_assignment=True)
@@ -33,6 +68,12 @@ class Fonts(_M):  # CSS font-family lists; single quotes inside JSON keep files 
     heading_letter_spacing_em: float = Field(0.0, ge=-0.05, le=0.2)
     code_scale: float = Field(0.9, ge=0.6, le=1.2)
 
+    @field_validator('body', 'heading', 'mono', mode='before')
+    @classmethod
+    def _clean_stack(cls, v):
+        return clean_font_stack(v)
+
+
 class Footer(_M):
     page_numbers: bool = True
     format: str = 'Page {page} of {pages}'
@@ -48,6 +89,13 @@ class PageLayout(_M):
     hyphenate: bool = False
     paragraph_gap_em: float = Field(0.9, ge=0, le=3)
     footer: Footer = Footer()
+
+    @field_validator('size')
+    @classmethod
+    def _check_size(cls, v):
+        page_dims_mm(v)
+        return v
+
 
 class PngLayout(_M):
     width_px: int = Field(900, ge=320, le=4000)
@@ -80,6 +128,12 @@ class Diagram(_M):
     font_size_px: int = Field(15, ge=8, le=32)
     mermaid: dict[str, str | int | bool] = {}   # raw themeVariables overrides
     plantuml: dict[str, str] = {}               # raw skinparam overrides
+
+    @field_validator('font', mode='before')
+    @classmethod
+    def _clean_font(cls, v):
+        return clean_font_stack(v)
+
 
 class Tone(_M):
     seed: Hex

@@ -379,6 +379,9 @@ class MainWindow(QMainWindow):
         if gen != self._gen:
             return
         self._last_theme = prep.theme
+        from .. import paths as _paths
+
+        self.preview.set_allowed_roots([prep.work_dir, _paths.VENDOR_DIR, _paths.WEB_DIR] + list(prep.font_files))
         self.settings.set_palette(prep.theme)
         self._python_warnings = prep.warnings
         self.problems.clear()

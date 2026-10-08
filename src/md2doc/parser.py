@@ -45,6 +45,7 @@ ADMON_ALIASES = {
     "question": "important", "help": "important", "faq": "important", "attention": "warning", "failure": "caution",
     "fail": "caution", "missing": "caution", "danger": "caution", "error": "caution", "bug": "caution",
 }
+_DIR_TAGS = {'p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'th', 'td', 'dt', 'dd'}
 THEMED = {"note", "tip", "important", "warning", "caution"}
 
 # ---- link policy: allow data:image/*, block javascript:/vbscript:/other data: -----------------------
@@ -212,6 +213,8 @@ def _post_rule(state) -> None:
     toks = state.tokens
     heads = state.env["headings"]
     for i, t in enumerate(toks):
+        if t.nesting == 1 and t.tag in _DIR_TAGS and t.attrGet("dir") is None:
+            t.attrSet("dir", "auto")  # per-block bidi: Arabic/Hebrew paragraphs align and order correctly
         if t.map and t.nesting == 1 and t.type not in ("heading_open",) and t.attrGet("data-line") is None:
             t.attrSet("data-line", str(t.map[0]))
         if t.type == "heading_open":
@@ -219,6 +222,8 @@ def _post_rule(state) -> None:
                 t.attrSet("data-line", str(t.map[0]))
             inl = toks[i + 1] if i + 1 < len(toks) else None
             text = _plain(inl) if inl is not None and inl.type == "inline" else ""
+            if not t.attrGet("id"):  # e.g. a math-only heading has no slug
+                t.attrSet("id", f"section-{len(heads) + 1}")
             heads.append((int(t.tag[1]), t.attrGet("id") or "", text))
         elif t.type == "admonition_open":
             cls = (t.attrGet("class") or "").split()
@@ -232,7 +237,7 @@ def _post_rule(state) -> None:
 def _plain(inline: Token) -> str:
     out = []
     for c in inline.children or []:
-        if c.type in ("text", "code_inline"):
+        if c.type in ("text", "code_inline", "math_inline", "math_inline_double"):
             out.append(c.content)
         elif c.type in ("softbreak", "hardbreak"):
             out.append(" ")
@@ -266,7 +271,7 @@ _relax_attr_values()
 
 
 def make_md(html_mode: str = "safe", *, typographer: bool = False, breaks: bool = False) -> MarkdownIt:
-    md = MarkdownIt("commonmark", {"html": html_mode != "off", "typographer": typographer, "breaks": breaks, "linkify": False})
+    md = MarkdownIt("commonmark", {"html": html_mode != "off", "typographer": typographer, "breaks": breaks, "linkify": False, "maxNesting": 100})
     md.enable(["table", "strikethrough"])
     if typographer:
         md.enable(["replacements", "smartquotes"])

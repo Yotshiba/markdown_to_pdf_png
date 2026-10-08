@@ -6,6 +6,9 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from urllib.parse import urlparse
+from urllib.request import url2pathname
+
 from .browser import NoBrowserError, find_browser
 
 MAX_TILE_DEVICE_PX = 8192  # Chromium silently wraps content every 16384 device px; stay well below
@@ -39,9 +42,21 @@ def _atomic_write(path: Path, data: bytes) -> None:
 
 
 class Exporter:
-    def __init__(self, browser_path: str | None = None, deadline_s: int = 120):
+    def __init__(self, browser_path: str | None = None, deadline_s: int = 120, allowed_roots: list[Path] | None = None):
         self.kind, self.exe = find_browser(browser_path)
         self.deadline_ms = deadline_s * 1000
+        self.allowed_roots = [Path(r).resolve() for r in (allowed_roots or [])]
+
+    def _file_allowed(self, url: str) -> bool:
+        """The page may only read files from the work dir, the vendored renderers and imported fonts."""
+        p = urlparse(url)
+        if p.netloc not in ("", "localhost"):
+            return False
+        try:
+            path = Path(url2pathname(p.path)).resolve()
+        except OSError:
+            return False
+        return any(path == r or path.is_relative_to(r) for r in self.allowed_roots)
 
     def __enter__(self) -> "Exporter":
         from playwright.sync_api import Error as PWError
@@ -73,7 +88,7 @@ class Exporter:
 
         def gate(route):  # only local content may load; everything else is refused and reported
             url = route.request.url
-            if url.startswith(("file:", "data:", "blob:", "about:")):
+            if url.startswith(("data:", "blob:", "about:")) or (url.startswith("file:") and self._file_allowed(url)):
                 route.continue_()
             else:
                 blocked.append(url[:120])
@@ -84,11 +99,18 @@ class Exporter:
         page.set_default_timeout(self.deadline_ms + 15_000)
         page.emulate_media(media=media)
         page.goto(html.resolve().as_uri(), wait_until="load")
-        page.wait_for_function("window.__renderDone === true", polling=100, timeout=self.deadline_ms + 15_000)
+        # wait_for_function() evaluates its predicate with eval() inside the page, which the page's CSP (no
+        # 'unsafe-eval') forbids; plain evaluate() goes through the DevTools protocol and is not affected.
+        waited = 0
+        while not page.evaluate("() => window.__renderDone === true"):
+            page.wait_for_timeout(100)
+            waited += 100
+            if waited > self.deadline_ms + 15_000:
+                raise TimeoutError("the page did not finish rendering in time")
         return ctx, page, blocked
 
     def _report(self, page, blocked: list[str]) -> PageReport:
-        raw = page.evaluate("window.__renderReport || {}")
+        raw = page.evaluate("() => window.__renderReport || {}")
         r = PageReport(errors=raw.get("errors", []), warnings=raw.get("warnings", []), diagrams=raw.get("diagrams", []),
                        math=raw.get("math", {}), ms=raw.get("ms", 0), fatal=raw.get("fatal"), browser=self.version)
         for u in dict.fromkeys(blocked):
@@ -113,8 +135,8 @@ class Exporter:
         ctx, page, blocked = self._open(html, width=width, scale=scale, media="screen")
         try:
             report = self._report(page, blocked)
-            w = page.evaluate("Math.ceil(document.documentElement.getBoundingClientRect().width)")
-            h = page.evaluate("Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.scrollHeight,"
+            w = page.evaluate("() => Math.ceil(document.documentElement.getBoundingClientRect().width)")
+            h = page.evaluate("() => Math.ceil(Math.max(document.documentElement.scrollHeight, document.body.scrollHeight,"
                               " document.documentElement.getBoundingClientRect().height))")
             h += h % 2  # even height keeps fractional scales seam-free
             eff = scale

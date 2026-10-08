@@ -32,6 +32,8 @@ def find_browser(user_path: str | None = None) -> tuple[str, str]:
     """-> (kind, executable path). Raises NoBrowserError with an actionable message."""
     cands: list[tuple[str, str | None]] = []
     if user_path:
+        if not Path(user_path).is_file():
+            raise NoBrowserError(f"--browser {user_path!r} does not exist")
         cands.append(("custom", user_path))
     cands.append(("msedge", _app_path("msedge.exe")))
     for env in ("PROGRAMFILES(X86)", "PROGRAMFILES", "LOCALAPPDATA"):

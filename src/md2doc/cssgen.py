@@ -2,7 +2,7 @@
 from pygments.formatters import HtmlFormatter
 from pygments.style import Style
 from pygments.token import Token, Comment, Keyword, Name, String, Number, Operator, Punctuation, Generic, Error, Literal as Lit
-from .theme import Theme
+from .theme import Theme, page_dims_mm
 
 GENERIC = ('serif', 'sans-serif', 'monospace', 'system-ui', 'ui-monospace')
 FONT_TAIL = "'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', 'Apple Color Emoji'"
@@ -16,7 +16,8 @@ def with_tail(stack):  # user stack + emoji fallbacks + the user's generic (Chro
 
 def css_str(s):  # CSS string literal for the running title
     bs = chr(92)
-    return "'" + s.replace(bs, bs + bs).replace("'", bs + "'").replace(chr(10), ' ') + "'"
+    s = ''.join(' ' if ch in '\r\n\f\u2028\u2029\x00' else ch for ch in s)
+    return "'" + s.replace(bs, bs + bs).replace("'", bs + "'").replace('<', bs + '3c ') + "'"
 
 def theme_css(t: Theme, title=None):
     c, f, L = t.colors, t.fonts, t.layout
@@ -41,18 +42,21 @@ def theme_css(t: Theme, title=None):
         v[f'--adm-{k}-bar'], v[f'--adm-{k}-bg'], v[f'--adm-{k}-title'] = a.bar, a.bg, a.title
     for i, d in enumerate(t.diagram.palette):
         v[f'--dg{i}-fill'], v[f'--dg{i}-border'], v[f'--dg{i}-text'] = d.fill, d.border, d.text
-    w, h = PAPER_MM.get(pg.size.upper(), (210, 297))
+    w, h = page_dims_mm(pg.size)
     v['--page-h'] = f"{(w if pg.orientation == 'landscape' else h):g}mm"
     root = ':root{' + ';'.join(f'{k}:{val}' for k, val in v.items()) + '}'
     boxes = ''
-    if pg.footer.page_numbers:
+    top_mm, _r, bottom_mm, _l = pg.margin_mm
+    if pg.footer.page_numbers and bottom_mm >= 10:  # margin boxes need room
         txt = pg.footer.format.replace('{page}', "' counter(page) '").replace('{pages}', "' counter(pages) '")
         boxes += f"@bottom-center{{content:'{txt}';font-family:var(--font-body);font-size:8.5pt;color:var(--text-muted)}}"
-    if pg.footer.show_title and title:
+    if pg.footer.show_title and title and top_mm >= 10:
         boxes += f'@top-right{{content:{css_str(title)};font-family:var(--font-body);font-size:8.5pt;color:var(--text-muted)}}'
     m = ' '.join(f'{x:g}mm' for x in pg.margin_mm)
-    size = PAPER.get(pg.size.upper(), pg.size)
-    page = (f'@page{{size:{size} {pg.orientation};margin:{m};background:var(--page-bg);{boxes}}}'
+    pw_mm, ph_mm = page_dims_mm(pg.size)
+    if pg.orientation == 'landscape':
+        pw_mm, ph_mm = ph_mm, pw_mm
+    page = (f'@page{{size:{pw_mm:g}mm {ph_mm:g}mm;margin:{m};background:var(--page-bg);{boxes}}}'
             '@page:first{@top-right{content:none}}'
             '@page cover{margin:0;@top-right{content:none}@bottom-center{content:none}}')
     # multicol ONLY when needed: a multicol ancestor disables the named-page (cover) feature
@@ -69,7 +73,7 @@ def theme_css(t: Theme, title=None):
 def printable_mm(t: Theme) -> tuple[float, float]:
     """Printable content box (width, height) in mm for the theme's page size / orientation / margins."""
     pg = t.layout.page
-    w, h = PAPER_MM.get(pg.size.upper(), (210, 297))
+    w, h = page_dims_mm(pg.size)
     if pg.orientation == 'landscape':
         w, h = h, w
     top, right, bottom, left = pg.margin_mm

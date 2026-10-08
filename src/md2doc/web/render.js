@@ -5,8 +5,7 @@
 (function () {
   'use strict';
   const t0 = performance.now();
-  const cfgEl = document.getElementById('md2doc-config');
-  const CFG = cfgEl ? JSON.parse(cfgEl.textContent) : {};
+  const CFG = window.__md2docConfig || {};
   const report = (window.__renderReport = {
     errors: [], warnings: [], diagrams: [], math: { count: 0, errors: 0 }, ms: 0, fatal: null,
   });
@@ -53,20 +52,45 @@
     });
   }
 
-  /* shrink display equations that are wider than the text column */
+  /* shrink display equations and tables that are wider than the text column */
   function fitMath() {
     document.querySelectorAll('.math.block, .math.display, .math.amsmath').forEach((el) => {
-      const inner = el.querySelector('.katex-html') || el.querySelector('.katex');
+      const inner = el.querySelector('.katex-html');
       if (!inner) return;
-      // natural width = widest formula row (equation-number columns are positioned outside this measure)
-      const rows = Array.from(inner.children).filter((c) => c.classList.contains('base'));
-      const natural = rows.length ? Math.max.apply(null, rows.map((c) => c.getBoundingClientRect().width)) : inner.getBoundingClientRect().width;
+      const box = el.getBoundingClientRect();
+      let lo = Infinity, hi = -Infinity;
+      inner.querySelectorAll('*').forEach((n) => {
+        if (n.classList.contains('tag')) return; // equation numbers sit outside the formula width
+        const r = n.getBoundingClientRect();
+        if (r.width === 0) return;
+        if (r.left < lo) lo = r.left;
+        if (r.right > hi) hi = r.right;
+      });
+      const natural = hi - lo;
       const avail = el.clientWidth;
       if (natural > avail + 1) {
-        const pct = Math.max(55, Math.floor((avail / natural) * 100));
+        const pct = Math.max(50, Math.floor((avail / natural) * 100));
         el.style.fontSize = pct + '%';
-        report.warnings.push({ kind: 'math', line: lineOf(el), message: 'equation was wider than the page; shrunk to ' + pct + '%' });
+        el.style.overflowX = 'visible';
+        report.warnings.push({ kind: 'math', line: lineOf(el), message: 'equation was wider than the page; shrunk to ' + pct + '%' + (pct <= 50 ? ' (still too wide: split it with \\\\ or an aligned block)' : '') });
       }
+    });
+  }
+
+  function fitTables() {
+    document.querySelectorAll('.content table').forEach((tb) => {
+      const avail = (tb.parentElement || document.body).clientWidth;
+      const over = () => tb.scrollWidth > avail + 1;
+      if (!over()) return;
+      let pct = 100;
+      while (over() && pct > 60) { pct -= 5; tb.style.fontSize = pct + '%'; }   // 1) smaller text keeps words whole
+      if (!over()) {
+        report.warnings.push({ kind: 'table', line: lineOf(tb), message: 'table is wider than the page; text shrunk to ' + pct + '%' });
+        return;
+      }
+      tb.classList.add('break-words');                                           // 2) last resort: break inside long words
+      tb.style.fontSize = '85%';
+      report.warnings.push({ kind: 'table', line: lineOf(tb), message: 'table is much wider than the page (long words or many columns); words may be broken. Use fewer columns or a landscape page' });
     });
   }
 
@@ -86,7 +110,7 @@
       hosts.forEach((pre) => { addError('mermaid', pre, 'Mermaid is not installed. Run: md2doc setup'); pre.outerHTML = errorCard('mermaid', 'Mermaid is not installed', 'Run: md2doc setup', ''); });
       return;
     }
-    mermaid.initialize(Object.assign({ startOnLoad: false, suppressErrorRendering: true }, CFG.mermaid || {}));
+    mermaid.initialize(Object.assign({ startOnLoad: false, suppressErrorRendering: true }, CFG.mermaid || {}, { securityLevel: 'strict' }));
     for (let i = 0; i < hosts.length; i++) {
       const pre = hosts[i];
       const src = pre.textContent.trim();
@@ -164,11 +188,13 @@
       if (remaining() < 500) { host.innerHTML = errorCard('plantuml', 'PlantUML diagram ' + (i + 1) + ' skipped', 'export time budget used up', src); addError('plantuml', host, 'skipped: time budget used up'); continue; }
       const res = await withTimeout(pumlRender(src), Math.min(remaining(), CFG.plantumlTimeoutMs || 30000), 'diagram ' + (i + 1)).catch((e) => ({ ok: false, error: e.message }));
       let svg = null, syntax = null;
-      if (res.ok && /\[From (textarea|string)|Syntax Error\?/i.test(res.svg)) {
+      if (res.ok && /\[From (textarea|string)|Syntax Error\?|Diagram not supported|is not recognized/i.test(res.svg)) {
         // the engine returns an error picture instead of failing: turn it into our own card
         const texts = Array.from(new DOMParser().parseFromString(res.svg, 'image/svg+xml').querySelectorAll('text')).map((t) => t.textContent.trim()).filter(Boolean);
         const k = texts.findIndex((t) => /Syntax Error|Error line/i.test(t));
+        const unsupported = texts.find((t) => /not supported by this release|not recognized/i.test(t));
         syntax = 'PlantUML syntax error' + (k > 0 ? ' near: "' + texts[k - 1] + '"' : '') + (k >= 0 ? ' (' + texts[k].replace(/^Syntax Error\?\s*/i, '').replace(/[()]/g, '') + ')' : '');
+        if (unsupported && k < 0) syntax = 'PlantUML does not support this diagram type in the built-in engine (' + unsupported + '). Use the Java renderer: md2doc setup --java, then --plantuml auto';
         res.ok = false; res.error = syntax;
       }
       if (res.ok) { try { svg = isolateSvg(res.svg, 'pu' + i); } catch (e) { svg = null; } }
@@ -198,7 +224,9 @@
     await renderMermaid();
     await renderPlantUml();
     await document.fonts.ready;
+    if (CFG.mode !== 'preview') document.querySelectorAll('details').forEach((d) => { d.open = true; }); // closed <details> would print empty
     fitMath();
+    fitTables();
     await settleImages();
     await nextFrame(); await nextFrame();
   }

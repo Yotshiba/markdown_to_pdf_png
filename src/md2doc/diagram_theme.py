@@ -151,3 +151,40 @@ def plantuml_prologue(t: Theme) -> str:
                'SequenceTitleFontColor': k['text'], 'TitleFontColor': k['text']})
     sp.update(d.plantuml)
     return chr(10).join(f'skinparam {key} {val}' for key, val in sp.items())
+
+
+STYLE_KINDS = {'mindmap': 'mindmapDiagram', 'wbs': 'wbsDiagram', 'gantt': 'ganttDiagram', 'json': 'jsonDiagram',
+               'yaml': 'yamlDiagram', 'salt': 'saltDiagram'}
+
+
+def plantuml_preamble(t: Theme, kind: str = 'uml') -> str:
+    """Theme preamble for one @start<kind> block.
+
+    UML-style diagrams take skinparams. The newer kinds (mindmap, wbs, gantt, json, yaml, salt) use a compact
+    <style> block instead: the large skinparam list overflows the JS engine's stack on those parsers.
+    """
+    kind = (kind or 'uml').lower()
+    if kind == 'uml':
+        return plantuml_prologue(t)
+    if kind not in STYLE_KINDS:
+        return ''  # ditaa, dot, ebnf, regex, math, ... : leave untouched
+    k = diagram_colors(t)
+    if kind == 'salt':  # wireframes ignore <style>; a few skinparams are enough
+        font = ((t.diagram.font or t.fonts.body).split(',')[0].strip(' "' + chr(39)))
+        return chr(10).join(f'skinparam {a} {b}' for a, b in (
+            ('backgroundColor', 'transparent'), ('defaultFontName', font), ('defaultFontColor', k['text']),
+            ('shadowing', 'false')))
+    font = ((t.diagram.font or t.fonts.body).split(',')[0].strip(' "' + chr(39)))
+    sel = STYLE_KINDS[kind]
+    node = f"BackGroundColor {k['node']}\n    LineColor {k['border']}\n    FontColor {k['text']}"
+    body = {
+        'mindmap': f"node {{\n    {node}\n  }}\n  arrow {{\n    LineColor {k['line']}\n  }}",
+        'wbs': f"node {{\n    {node}\n  }}\n  arrow {{\n    LineColor {k['line']}\n  }}",
+        'gantt': f"task {{\n    {node}\n  }}\n  separator {{\n    LineColor {k['grid']}\n  }}",
+        'json': f"node {{\n    {node}\n  }}\n  highlight {{\n    BackGroundColor {k['node2']}\n  }}",
+        'yaml': f"node {{\n    {node}\n  }}",
+        'salt': '',
+    }[kind]
+    inner = f"\n  {body}" if body else ''
+    return (f"<style>\nroot {{\n  BackGroundColor transparent\n  FontColor {k['text']}\n  FontName {font}\n"
+            f"  LineColor {k['border']}\n}}\n{sel} {{{inner}\n}}\n</style>")

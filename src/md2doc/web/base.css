@@ -58,8 +58,8 @@ ul.contains-task-list,li.task-list-item{list-style:none}li.task-list-item input{
 html[data-mode=preview] .cover,html[data-mode=png] .cover{border-bottom:1px solid var(--border);margin-bottom:2em}
 .toc ol{list-style:none;padding-left:1.2em}.toc>ol{padding-left:0}.toc a{text-decoration:none;color:var(--text)}
 html[data-numbered] body{counter-reset:h1 h2 h3 h4 h5 h6}
-html[data-numbered] h1{counter-reset:h2 h3 h4 h5 h6}html[data-numbered] h2{counter-reset:h3 h4 h5 h6}
-html[data-numbered] h3{counter-reset:h4 h5 h6}html[data-numbered] h4{counter-reset:h5 h6}html[data-numbered] h5{counter-reset:h6}
+html[data-numbered] h1{counter-set:h2 0 h3 0 h4 0 h5 0 h6 0}html[data-numbered] h2{counter-set:h3 0 h4 0 h5 0 h6 0}
+html[data-numbered] h3{counter-set:h4 0 h5 0 h6 0}html[data-numbered] h4{counter-set:h5 0 h6 0}html[data-numbered] h5{counter-set:h6 0}
 html[data-numbered] h1::before{counter-increment:h1;content:counter(h1) '. '}
 html[data-numbered] h2::before{counter-increment:h2;content:counter(h1) '.' counter(h2) ' '}
 html[data-numbered] h3::before{counter-increment:h3;content:counter(h1) '.' counter(h2) '.' counter(h3) ' '}
@@ -96,4 +96,17 @@ img.right{float:right;margin:0 0 .5em 1em}img.left{float:left;margin:0 1em .5em 
 @layer base{
 hr.footnotes-sep{display:none}
 .footnotes-list{padding-left:1.4em}
+}
+@layer base{
+table.break-words td,table.break-words th{overflow-wrap:anywhere}
+table{max-width:100%}
+html[data-numbered] h4::before{counter-increment:h4;content:counter(h1) '.' counter(h2) '.' counter(h3) '.' counter(h4) ' '}
+@media print{
+  .content table,.content .diagram,.content figure,.content .codeblock,.content .math.block,.content .math.amsmath,.content .math.display{column-span:all}
+  figure img{max-height:calc(var(--printable-h,240mm) - 5em)}
+}
+details>summary{cursor:pointer}
+}
+@layer base{
+.plantuml-host[data-kind=salt] svg{background:#fff;border-radius:6px;padding:12px;max-width:100%;height:auto}
 }
