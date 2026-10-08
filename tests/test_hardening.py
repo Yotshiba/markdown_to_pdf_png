@@ -298,3 +298,14 @@ def test_front_matter_css_injection_cannot_load_local_images(tmp_path):
 
     img = pdfium.PdfDocument(str(out))[0].render(scale=0.5).to_pil().convert("RGB")
     assert not any(r > 240 and g < 20 and b < 20 for r, g, b in img.getdata())
+
+
+@bro
+def test_normal_equations_with_radicals_and_integrals_are_not_shrunk(tmp_path, capsys):
+    # sqrt/integral glyphs are SVGs with a huge nominal width; they must not trigger the overflow shrink
+    md = tmp_path / "n.md"
+    md.write_text(r"$$\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}$$" + "\n\n" + r"$$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$" + "\n", encoding="utf-8")
+    assert run(md, "-o", tmp_path / "n.pdf") == 0
+    assert "equation was wider" not in capsys.readouterr().err
+    assert run(ROOT / "examples" / "sample.md", "-o", tmp_path / "s.pdf") == 0
+    assert "equation was wider" not in capsys.readouterr().err

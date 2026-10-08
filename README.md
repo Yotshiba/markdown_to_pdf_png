@@ -42,15 +42,17 @@ md2doc-gui.bat            &:: or: md2doc-gui notes.md
 md2doc notes.md                                   :: notes.pdf next to the input
 md2doc notes.md -f png --theme nord               :: one long PNG
 md2doc notes.md -f both -o out\report             :: report.pdf and report.png
+md2doc notes.md -o exports\                       :: a trailing slash means a folder (created if missing)
 md2doc notes.md --font "Georgia" --accent "#e91e63" --font-size 12
 md2doc notes.md --tone-seed "#2e7d32" --temperature 0.4 --mode dark
-md2doc notes.md --font-file MyFont.ttf --font "My Font" --toc --cover --numbered
+md2doc notes.md --font-file MyFont.ttf --font "My Font" --toc --toc-depth 2 --cover --numbered
 md2doc notes.md --page-size Letter --landscape --margin "15 20" --columns 2
 md2doc themes        &:: list presets        md2doc fonts georgia   &:: search installed fonts
 md2doc doctor        &:: environment check   md2doc -h              &:: all options
 ```
 
-Exit codes: `0` ok, `1` error, `2` warnings with `--strict`, `3` no browser found, `4` timeout.
+Exit codes: `0` ok, `1` error, `2` warnings with `--strict`, `3` no browser found, `4` timeout, `5` cancelled (Ctrl-C), `64` bad command line.
+The output must end in `.pdf` / `.png` and can never overwrite the input file.
 
 ### Front matter
 
@@ -110,12 +112,19 @@ CFF `.otf` and `.woff2` fonts work but PDF embeds them as outlines. Windows font
 ## Safety
 
 Markdown may come from anywhere, so exports are locked down: raw HTML is sanitised (`--html off` disables it), the page runs under a
-strict Content-Security-Policy with a per-render nonce, all network requests from the page are blocked, images are read by Python
-(magic-byte checked, UNC paths refused; `--untrusted` also confines them to the document folder), and PlantUML runs sandboxed.
+strict Content-Security-Policy with a per-render nonce (no `eval`), and the page may only read files from its own work folder, the
+vendored renderers and fonts you imported; every network request from the page is blocked. Images are read by Python (magic-byte
+checked, UNC/network paths refused, decompression bombs and oversized files rejected; `--untrusted` also confines them to the document
+folder). Remote images are fetched only from public hosts (no localhost/private ranges, redirects re-checked). Front-matter fonts and
+page sizes are validated before they reach any CSS, YAML aliases are refused, and PlantUML runs sandboxed.
 `--no-remote-images` stops any download. Remote PlantUML rendering is off unless you pass `--allow-remote-plantuml`.
 
 ## Known limits
 
+- Very wide tables are shrunk (down to 60% text size) to fit the page, then words are broken as a last resort; long display equations are
+  scaled down the same way. The Problems list reports both.
+- PlantUML wireframes (`@startsalt`) and ditaa are not supported by the built-in engine. They are rendered with Java automatically when
+  `md2doc setup --java` and Java 11+ are available, otherwise you get an error card that says so.
 - PNG output is one continuous image; very long documents are tiled internally and the scale is lowered automatically to stay under 90 megapixels.
 - KaTeX has no `\label`/`\eqref`/`multline`; `multline` and `flalign` are mapped to the nearest supported environment.
 - Mermaid ZenUML and icon packs are not bundled (they need extra downloads).

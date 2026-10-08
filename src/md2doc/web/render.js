@@ -61,6 +61,7 @@
       let lo = Infinity, hi = -Infinity;
       inner.querySelectorAll('*').forEach((n) => {
         if (n.classList.contains('tag')) return; // equation numbers sit outside the formula width
+        if (n instanceof SVGElement) return;     // radical/delimiter glyphs: huge nominal width, clipped by their HTML wrapper
         const r = n.getBoundingClientRect();
         if (r.width === 0) return;
         if (r.left < lo) lo = r.left;
