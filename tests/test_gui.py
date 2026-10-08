@@ -66,7 +66,8 @@ def test_main_window_renders_and_lists_problems(qapp, tmp_path, monkeypatch):
     from PySide6.QtCore import QSettings, QTimer
     from PySide6.QtWidgets import QApplication
 
-    QSettings.setPath(QSettings.Format.NativeFormat, QSettings.Scope.UserScope, str(tmp_path))
+    # Native format is the registry on Windows: redirect to an INI file so tests never touch real user settings
+    monkeypatch.setenv("MD2DOC_SETTINGS_INI", str(tmp_path / "settings.ini"))
     from md2doc.gui.main_window import MainWindow
 
     md = tmp_path / "d.md"

@@ -66,7 +66,8 @@ class MainWindow(QMainWindow):
         self._last_theme = None
         self._dark_app = False
         self._work = Path(tempfile.mkdtemp(prefix="md2doc_preview_"))
-        self.qs = QSettings("md2doc", "md2doc")
+        ini = os.environ.get("MD2DOC_SETTINGS_INI")  # tests/self-test: keep the real (registry) settings untouched
+        self.qs = QSettings(ini, QSettings.Format.IniFormat) if ini else QSettings("md2doc", "md2doc")
         self.signals = _Signals()
         self.signals.done.connect(self._on_prepared)
         self.signals.failed.connect(self._on_prepare_failed)

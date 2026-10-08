@@ -45,7 +45,11 @@ class ExportRunner(QObject):
         p.readyReadStandardError.connect(self._on_stderr)
         p.finished.connect(self._on_finished)
         p.errorOccurred.connect(self._on_error)
-        args = ["-I", "-m", "md2doc", "export", "--job", name, "--jsonl"] + (["--both"] if both else [])  # -I: ignore cwd/env imports
+        export_args = ["export", "--job", name, "--jsonl"] + (["--both"] if both else [])
+        if getattr(sys, "frozen", False):  # packaged app: the console CLI sits next to the GUI exe
+            program, args = str(Path(sys.executable).with_name("md2doc.exe")), export_args
+        else:  # -I: ignore cwd/env imports
+            program, args = sys.executable, ["-I", "-m", "md2doc"] + export_args
         p.setWorkingDirectory(tempfile.gettempdir())
         env = p.processEnvironment()
         from PySide6.QtCore import QProcessEnvironment
@@ -54,7 +58,7 @@ class ExportRunner(QObject):
         env.insert("PYTHONIOENCODING", "utf-8")
         p.setProcessEnvironment(env)
         self._proc = p
-        p.start(sys.executable, args)
+        p.start(program, args)
 
     def cancel(self) -> None:
         if not self.running:

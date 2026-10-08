@@ -24,6 +24,18 @@ python -m venv .venv
 
 Needs Python 3.11+ and Microsoft Edge or Google Chrome.
 
+### Standalone app (no Python needed)
+
+```bat
+build_exe.bat          &:: builds dist\md2doc\  (about 740 MB; add "zip" for dist\md2doc-windows.zip)
+```
+
+`dist\md2doc\` is a portable folder: copy it anywhere and run `md2doc-gui.exe` (desktop app) or `md2doc.exe` (command line).
+All renderers, fonts and the PlantUML jar are inside it, so it works offline. It still needs Microsoft Edge or Chrome on the PC
+(Windows 10/11 already has Edge). Java is only needed if you pick the Java PlantUML renderer.
+Keep the two `.exe` files together: the desktop app exports by running `md2doc.exe` next to it.
+`md2doc-gui.exe file.md --selftest result.json` launches the app, renders and exports once, and writes a pass/fail JSON (used to verify builds).
+
 ## Desktop app
 
 ```bat

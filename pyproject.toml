@@ -29,6 +29,7 @@ dependencies = [
 gui = ["PySide6-Essentials~=6.11", "PySide6-Addons~=6.11"]
 pdf-tools = ["pypdfium2>=4.30"]
 dev = ["pytest>=8", "pytest-qt>=4.4", "pypdfium2>=4.30"]
+build = ["pyinstaller>=6.10"]  # build_exe.bat
 
 [project.scripts]
 md2doc = "md2doc.cli:main"

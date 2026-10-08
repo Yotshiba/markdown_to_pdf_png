@@ -216,12 +216,16 @@ def cmd_doctor(argv: list[str]) -> int:
     print(f"Java          {'%s (Java %d)' % java if java else 'not found (only needed for --plantuml java)'}")
     dot = puml.find_dot()
     print(f"Graphviz      {dot if dot else 'not found (optional; PlantUML JS engine bundles its own)'}")
-    try:
-        import PySide6  # noqa: F401
+    if getattr(sys, "frozen", False):  # packaged build: the GUI is a sibling program, Qt is not in this exe
+        gui = Path(sys.executable).with_name("md2doc-gui.exe")
+        print(f"GUI           {gui if gui.is_file() else 'md2doc-gui.exe is missing next to md2doc.exe'}")
+    else:
+        try:
+            from importlib.metadata import version
 
-        print(f"GUI           PySide6 {PySide6.__version__}")
-    except ImportError:
-        print("GUI           PySide6 not installed (pip install \"md2doc[gui]\")")
+            print(f"GUI           PySide6 {version('PySide6')}")
+        except Exception:  # noqa: BLE001 - not installed
+            print("GUI           PySide6 not installed (pip install \"md2doc[gui]\")")
     print("\nAll required parts are present." if ok else "\nSome required parts are missing; see above.")
     return EXIT_OK if ok else EXIT_FATAL
 
