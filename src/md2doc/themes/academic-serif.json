@@ -1,0 +1,73 @@
+{
+  "id": "academic-serif",
+  "name": "Academic (LaTeX-like)",
+  "mode": "light",
+  "colors": {
+    "page_bg": "#ffffff",
+    "text": "#111111",
+    "text_muted": "#4d4d4d",
+    "heading": "#000000",
+    "link": "#0b3d91",
+    "accent": "#0b3d91",
+    "border": "#999999",
+    "code_bg": "#f5f5f5",
+    "code_fg": "#111111",
+    "inline_code_bg": "#f0f0f0",
+    "quote_bar": "#999999",
+    "quote_bg": "#ffffff",
+    "table_head_bg": "#ffffff",
+    "table_stripe": "#ffffff",
+    "selection": "#cfe0ff",
+    "admonition": {
+      "note": {
+        "bar": "#0b3d91",
+        "bg": "#eaeff7",
+        "title": "#0b3d91"
+      },
+      "tip": {
+        "bar": "#1b6e2e",
+        "bg": "#edf3ed",
+        "title": "#1b6e2e"
+      },
+      "important": {
+        "bar": "#6a2c91",
+        "bg": "#f2eef7",
+        "title": "#6a2c91"
+      },
+      "warning": {
+        "bar": "#8a5a00",
+        "bg": "#f6f1ec",
+        "title": "#8a5a00"
+      },
+      "caution": {
+        "bar": "#a31515",
+        "bg": "#faedeb",
+        "title": "#a31515"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Latin Modern Roman\", \"CMU Serif\", \"Source Serif 4\", Cambria, Georgia, serif",
+    "heading": "\"Latin Modern Roman\", \"CMU Serif\", \"Source Serif 4\", Cambria, Georgia, serif",
+    "mono": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, monospace",
+    "size_pt": 11,
+    "line_height": 1.45,
+    "heading_scale": 1.2,
+    "heading_weight": 700
+  },
+  "layout": {
+    "table_style": "booktabs",
+    "heading_rules": false,
+    "page": {
+      "margin_mm": [
+        25,
+        25,
+        28,
+        25
+      ],
+      "justify": true,
+      "hyphenate": true,
+      "paragraph_gap_em": 0.8
+    }
+  }
+}

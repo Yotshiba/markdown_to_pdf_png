@@ -1,0 +1,63 @@
+{
+  "id": "paper-sepia",
+  "name": "Paper (Sepia)",
+  "mode": "light",
+  "colors": {
+    "page_bg": "#f4ecd8",
+    "text": "#3b2f22",
+    "text_muted": "#6b5b49",
+    "heading": "#2a1f14",
+    "link": "#8a3b12",
+    "accent": "#a8541d",
+    "border": "#d8c9a6",
+    "code_bg": "#ebe0c5",
+    "code_fg": "#3b2f22",
+    "inline_code_bg": "#e8dbbc",
+    "quote_bar": "#b98a52",
+    "quote_bg": "#efe4cb",
+    "table_head_bg": "#e8dbbc",
+    "table_stripe": "#efe4cb",
+    "selection": "#e3cf9f",
+    "admonition": {
+      "note": {
+        "bar": "#2f6690",
+        "bg": "#e4e1d3",
+        "title": "#2f6690"
+      },
+      "tip": {
+        "bar": "#4a7c3a",
+        "bg": "#e6e3cb",
+        "title": "#3f702e"
+      },
+      "important": {
+        "bar": "#7a4e9a",
+        "bg": "#eadfd4",
+        "title": "#7a4e9a"
+      },
+      "warning": {
+        "bar": "#9a6a00",
+        "bg": "#ede1c9",
+        "title": "#875c00"
+      },
+      "caution": {
+        "bar": "#a8321f",
+        "bg": "#f0ddc9",
+        "title": "#a8321f"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Source Serif 4\", Georgia, \"Times New Roman\", serif",
+    "mono": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, monospace",
+    "size_pt": 11.5,
+    "line_height": 1.7,
+    "heading_weight": 700
+  },
+  "layout": {
+    "page": {
+      "justify": true,
+      "hyphenate": true
+    },
+    "heading_rules": false
+  }
+}

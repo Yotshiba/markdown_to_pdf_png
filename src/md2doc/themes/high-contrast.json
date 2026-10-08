@@ -1,0 +1,60 @@
+{
+  "id": "high-contrast",
+  "name": "High Contrast",
+  "mode": "dark",
+  "colors": {
+    "page_bg": "#000000",
+    "text": "#ffffff",
+    "text_muted": "#d0d0d0",
+    "heading": "#ffff00",
+    "link": "#6cc7ff",
+    "accent": "#ffff00",
+    "border": "#ffffff",
+    "code_bg": "#0b0b0b",
+    "code_fg": "#ffffff",
+    "inline_code_bg": "#1a1a1a",
+    "quote_bar": "#ffff00",
+    "quote_bg": "#000000",
+    "table_head_bg": "#1a1a1a",
+    "table_stripe": "#0b0b0b",
+    "selection": "#1a3a8a",
+    "on_accent": "#000000",
+    "admonition": {
+      "note": {
+        "bar": "#6cc7ff",
+        "bg": "#010509",
+        "title": "#6cc7ff"
+      },
+      "tip": {
+        "bar": "#4dff88",
+        "bg": "#010902",
+        "title": "#4dff88"
+      },
+      "important": {
+        "bar": "#d7a8ff",
+        "bg": "#060409",
+        "title": "#d7a8ff"
+      },
+      "warning": {
+        "bar": "#ffff00",
+        "bg": "#090900",
+        "title": "#ffff00"
+      },
+      "caution": {
+        "bar": "#ff6b6b",
+        "bg": "#090101",
+        "title": "#ff6b6b"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+    "mono": "Consolas, \"Cascadia Mono\", monospace",
+    "size_pt": 12,
+    "line_height": 1.7,
+    "heading_weight": 700
+  },
+  "code": {
+    "pygments_style": "github-dark"
+  }
+}

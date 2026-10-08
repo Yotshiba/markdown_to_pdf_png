@@ -1,0 +1,73 @@
+{
+  "id": "github-light",
+  "name": "GitHub Light",
+  "mode": "light",
+  "colors": {
+    "page_bg": "#ffffff",
+    "text": "#1f2328",
+    "text_muted": "#59636e",
+    "heading": "#1f2328",
+    "link": "#0969da",
+    "accent": "#0969da",
+    "border": "#d1d9e0",
+    "code_bg": "#f6f8fa",
+    "code_fg": "#1f2328",
+    "inline_code_bg": "#eff1f3",
+    "quote_bar": "#d1d9e0",
+    "quote_bg": "#ffffff",
+    "table_head_bg": "#f6f8fa",
+    "table_stripe": "#f6f8fa",
+    "selection": "#b6e3ff",
+    "admonition": {
+      "note": {
+        "bar": "#0969da",
+        "bg": "#edf3fd",
+        "title": "#0969da"
+      },
+      "tip": {
+        "bar": "#1a7f37",
+        "bg": "#eef5ee",
+        "title": "#1a7f37"
+      },
+      "important": {
+        "bar": "#8250df",
+        "bg": "#f4f2fe",
+        "title": "#8250df"
+      },
+      "warning": {
+        "bar": "#9a6700",
+        "bg": "#f7f2ec",
+        "title": "#976500"
+      },
+      "caution": {
+        "bar": "#d1242f",
+        "bg": "#feefee",
+        "title": "#d1242f"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+    "mono": "\"Cascadia Mono\", Consolas, \"Liberation Mono\", monospace",
+    "size_pt": 11,
+    "line_height": 1.6,
+    "heading_scale": 1.25,
+    "heading_weight": 600
+  },
+  "code": {
+    "tokens": {
+      "keyword": "#cf222e",
+      "string": "#0a3069",
+      "number": "#0550ae",
+      "function": "#6639ba",
+      "type": "#953800",
+      "builtin": "#0550ae",
+      "tag": "#116329",
+      "attr": "#0550ae",
+      "comment": "#59636e"
+    }
+  },
+  "layout": {
+    "table_style": "zebra"
+  }
+}

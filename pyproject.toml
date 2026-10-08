@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "md2doc"
+version = "0.1.0"
+description = "Convert Markdown to PDF or PNG with images, LaTeX math, Mermaid and PlantUML diagrams, and custom themes, colours and fonts."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Yotshiba" }]
+dependencies = [
+    "markdown-it-py==4.2.0",
+    "mdit-py-plugins==0.6.1",
+    "Pygments>=2.19",
+    "nh3>=0.3.0",
+    "PyYAML>=6.0",
+    "Pillow>=11.0",
+    "httpx>=0.28",
+    "pydantic>=2.9",
+    "fonttools>=4.55",
+    "playwright>=1.55",
+    "pypdf>=5.0",
+    "platformdirs>=4.3",
+]
+
+[project.optional-dependencies]
+gui = ["PySide6-Essentials~=6.11", "PySide6-Addons~=6.11"]
+pdf-tools = ["pypdfium2>=4.30"]
+dev = ["pytest>=8", "pytest-qt>=4.4", "pypdfium2>=4.30"]
+
+[project.scripts]
+md2doc = "md2doc.cli:main"
+
+[project.gui-scripts]
+md2doc-gui = "md2doc.gui.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/md2doc"]
+# vendor/ is gitignored but must ship in wheels once `setup_vendor.py` has run
+artifacts = ["src/md2doc/vendor/**"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "browser: needs Edge/Chrome and the vendored renderers (run scripts/setup_vendor.py first)",
+]

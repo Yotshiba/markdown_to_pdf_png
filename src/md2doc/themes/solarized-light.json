@@ -1,0 +1,56 @@
+{
+  "id": "solarized-light",
+  "name": "Solarized Light",
+  "mode": "light",
+  "colors": {
+    "page_bg": "#fdf6e3",
+    "text": "#42575e",
+    "text_muted": "#566c74",
+    "heading": "#073642",
+    "link": "#0076bb",
+    "accent": "#268bd2",
+    "border": "#d9d2bc",
+    "code_bg": "#eee8d5",
+    "code_fg": "#42575e",
+    "inline_code_bg": "#eee8d5",
+    "quote_bar": "#93a1a1",
+    "quote_bg": "#f7f0dc",
+    "table_head_bg": "#eee8d5",
+    "table_stripe": "#f7f0dc",
+    "selection": "#d3e3e6",
+    "admonition": {
+      "note": {
+        "bar": "#268bd2",
+        "bg": "#edeee3",
+        "title": "#0070b1"
+      },
+      "tip": {
+        "bar": "#859900",
+        "bg": "#f3efd4",
+        "title": "#647300"
+      },
+      "important": {
+        "bar": "#6c71c4",
+        "bg": "#f0ebe2",
+        "title": "#5e61b3"
+      },
+      "warning": {
+        "bar": "#b58900",
+        "bg": "#f7edd4",
+        "title": "#896700"
+      },
+      "caution": {
+        "bar": "#dc322f",
+        "bg": "#fde8d4",
+        "title": "#cf2123"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Inter\", \"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+    "mono": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, monospace",
+    "size_pt": 11,
+    "line_height": 1.65,
+    "heading_weight": 700
+  }
+}

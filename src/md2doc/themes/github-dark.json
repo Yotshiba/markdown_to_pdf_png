@@ -1,0 +1,60 @@
+{
+  "id": "github-dark",
+  "name": "GitHub Dark",
+  "mode": "dark",
+  "colors": {
+    "page_bg": "#0d1117",
+    "text": "#f0f6fc",
+    "text_muted": "#9198a1",
+    "heading": "#f0f6fc",
+    "link": "#4493f8",
+    "accent": "#4493f8",
+    "border": "#3d444d",
+    "code_bg": "#151b23",
+    "code_fg": "#f0f6fc",
+    "inline_code_bg": "#1f232a",
+    "quote_bar": "#3d444d",
+    "quote_bg": "#0d1117",
+    "table_head_bg": "#151b23",
+    "table_stripe": "#151b23",
+    "selection": "#1b3a66",
+    "admonition": {
+      "note": {
+        "bar": "#4493f8",
+        "bg": "#152131",
+        "title": "#4493f8"
+      },
+      "tip": {
+        "bar": "#3fb950",
+        "bg": "#152520",
+        "title": "#3fb950"
+      },
+      "important": {
+        "bar": "#ab7df8",
+        "bg": "#201f31",
+        "title": "#ab7df8"
+      },
+      "warning": {
+        "bar": "#d29922",
+        "bg": "#24221e",
+        "title": "#d29922"
+      },
+      "caution": {
+        "bar": "#f85149",
+        "bg": "#2a1c1f",
+        "title": "#f85149"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+    "mono": "\"Cascadia Mono\", Consolas, \"Liberation Mono\", monospace",
+    "size_pt": 11,
+    "line_height": 1.6,
+    "heading_scale": 1.25,
+    "heading_weight": 600
+  },
+  "code": {
+    "pygments_style": "github-dark"
+  }
+}

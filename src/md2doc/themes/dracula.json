@@ -1,0 +1,59 @@
+{
+  "id": "dracula",
+  "name": "Dracula",
+  "mode": "dark",
+  "colors": {
+    "page_bg": "#282a36",
+    "text": "#f8f8f2",
+    "text_muted": "#a9b0d0",
+    "heading": "#bd93f9",
+    "link": "#8be9fd",
+    "accent": "#ff79c6",
+    "border": "#44475a",
+    "code_bg": "#21222c",
+    "code_fg": "#f8f8f2",
+    "inline_code_bg": "#44475a",
+    "quote_bar": "#bd93f9",
+    "quote_bg": "#2c2e3b",
+    "table_head_bg": "#343746",
+    "table_stripe": "#2c2e3b",
+    "selection": "#44475a",
+    "admonition": {
+      "note": {
+        "bar": "#8be9fd",
+        "bg": "#36414e",
+        "title": "#8be9fd"
+      },
+      "tip": {
+        "bar": "#50fa7b",
+        "bg": "#324442",
+        "title": "#50fa7b"
+      },
+      "important": {
+        "bar": "#bd93f9",
+        "bg": "#3b384e",
+        "title": "#bd93f9"
+      },
+      "warning": {
+        "bar": "#f1fa8c",
+        "bg": "#404444",
+        "title": "#f1fa8c"
+      },
+      "caution": {
+        "bar": "#ff5555",
+        "bg": "#45333c",
+        "title": "#ff7872"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Inter\", \"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+    "mono": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, monospace",
+    "size_pt": 11,
+    "line_height": 1.65,
+    "heading_weight": 700
+  },
+  "code": {
+    "pygments_style": "dracula"
+  }
+}

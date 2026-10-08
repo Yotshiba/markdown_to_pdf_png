@@ -1,0 +1,17 @@
+# Environments / caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Downloaded renderers (restored by `python scripts/setup_vendor.py`)
+src/md2doc/vendor/
+
+# Output and scratch
+out/
+*.part
+.coverage

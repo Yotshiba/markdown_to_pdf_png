@@ -1,0 +1,59 @@
+{
+  "id": "nord",
+  "name": "Nord",
+  "mode": "dark",
+  "colors": {
+    "page_bg": "#2e3440",
+    "text": "#d8dee9",
+    "text_muted": "#a8b2c4",
+    "heading": "#eceff4",
+    "link": "#88c0d0",
+    "accent": "#81a1c1",
+    "border": "#4c566a",
+    "code_bg": "#3b4252",
+    "code_fg": "#d8dee9",
+    "inline_code_bg": "#434c5e",
+    "quote_bar": "#81a1c1",
+    "quote_bg": "#333a47",
+    "table_head_bg": "#3b4252",
+    "table_stripe": "#323947",
+    "selection": "#434c5e",
+    "admonition": {
+      "note": {
+        "bar": "#81a1c1",
+        "bg": "#394250",
+        "title": "#90b0d1"
+      },
+      "tip": {
+        "bar": "#a3be8c",
+        "bg": "#3d464b",
+        "title": "#a3be8c"
+      },
+      "important": {
+        "bar": "#b48ead",
+        "bg": "#3f404e",
+        "title": "#c9a2c1"
+      },
+      "warning": {
+        "bar": "#ebcb8b",
+        "bg": "#45474b",
+        "title": "#ebcb8b"
+      },
+      "caution": {
+        "bar": "#bf616a",
+        "bg": "#423b46",
+        "title": "#ef8c94"
+      }
+    }
+  },
+  "fonts": {
+    "body": "\"Inter\", \"Segoe UI\", \"Noto Sans\", Helvetica, Arial, sans-serif",
+    "mono": "\"JetBrains Mono\", \"Cascadia Mono\", Consolas, monospace",
+    "size_pt": 11,
+    "line_height": 1.65,
+    "heading_weight": 700
+  },
+  "code": {
+    "pygments_style": "nord"
+  }
+}
